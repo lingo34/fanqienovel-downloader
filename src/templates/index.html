@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fanqienovel Downloader</title>
+</head>
+<body>
+    <h1>Download Novel</h1>
+    <form method="post">
+        <label for="book_id">Enter Book ID:</label>
+        <input type="text" name="book_id" id="book_id"><br><br>
+        <input type="submit" value="Download">
+    </form>
+
+    <h2>Search Novel</h2>
+    <form id="search_form">
+        <label for="search_query">Enter Search Keywords:</label>
+        <input type="text" name="search_query" id="search_query">
+        <button type="button" onclick="searchBook()">Search</button>
+    </form>
+    <div id="search_results"></div>
+
+
+    <h2>Logs</h2>
+    <pre>{{ logs | join('\n') }}</pre>
+
+    <h2>Downloaded Novels</h2>
+    <ul>
+        {% for novel in novels %}
+            <li><a href="/download/{{ novel }}">{{ novel }}</a></li>
+        {% endfor %}
+    </ul>
+
+    <div>{{ message }}</div>
+
+    <script>
+        function searchBook() {
+            const query = document.getElementById('search_query').value;
+            fetch('/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `search_query=${query}`,
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultsDiv = document.getElementById('search_results');
+                resultsDiv.innerHTML = ''; // Clear previous results
+                if (data.error) {
+                    resultsDiv.textContent = data.error;
+                } else {
+                    resultsDiv.textContent = "Found book ID: " + data.book_id + ". Now download it using the download form above."
+                }
+            });
+        }
+    </script>
+
+</body>
+</html>

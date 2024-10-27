@@ -7,6 +7,18 @@ from tqdm import tqdm
 from bs4 import BeautifulSoup
 import json, time, random, os, platform, shutil
 import concurrent.futures
+import logging
+
+# 配置日志记录
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("app.log"),
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger(__name__)
 
 CODE = [[58344, 58715], [58345, 58716]]
 charset = json.loads(
@@ -187,7 +199,7 @@ def down_book(it):
 
     safe_name = sanitize_filename(name)
     book_dir = os.path.join(script_dir, safe_name)
-    print('\n开始下载《%s》，状态‘%s’' % (name, zt))
+    logger.info('\n开始下载《%s》，状态‘%s’' % (name, zt))
     book_json_path = os.path.join(bookstore_dir, safe_name + '.json')
 
     if os.path.exists(book_json_path):
@@ -237,7 +249,7 @@ def down_book(it):
                 else:
                     text_file.write(zj[chapter_title].replace('\n', fg) + '\n')
     else:
-        print('保存模式出错！')
+        logger.error('保存模式出错！')
 
     return zt
 
@@ -278,7 +290,7 @@ def down_book_epub(it):
     safe_name = sanitize_filename(name)
     book_dir = os.path.join(script_dir, safe_name)
 
-    print('\n开始下载《%s》，状态‘%s’' % (name, zt))
+    logger.info('\n开始下载《%s》，状态‘%s’' % (name, zt))
     book_json_path = os.path.join(bookstore_dir, safe_name + '.json')
 
     existing_json_content = {}
@@ -382,7 +394,7 @@ def down_book_html(it):
     if not os.path.exists(book_dir):
         os.makedirs(book_dir)
 
-    print('\n开始下载《%s》，状态‘%s’' % (name, zt))
+    logger.info('\n开始下载《%s》，状态‘%s’' % (name, zt))
     book_json_path = os.path.join(bookstore_dir, safe_name + '.json')
 
     existing_json_content = {}
@@ -603,7 +615,7 @@ def down_book_latex(it):
 
     safe_name = sanitize_filename(name)
 
-    print('\n开始下载《%s》，状态‘%s’' % (name, zt))
+    logger.info('\n开始下载《%s》，状态‘%s’' % (name, zt))
     book_json_path = os.path.join(bookstore_dir, safe_name + '.json')
 
     existing_json_content = {}
@@ -679,10 +691,10 @@ def search():
             if data['code'] == 0:
                 books = data['data']
                 if not books:
-                    print("没有找到相关书籍。")
+                    logger.error("没有找到相关书籍。")
                     break
                 for i, book in enumerate(books):
-                    print(f"{i + 1}. 名称：{book['book_data'][0]['book_name']} 作者：{book['book_data'][0]['author']} ID：{book['book_data'][0]['book_id']} 字数：{book['book_data'][0]['word_number']}")
+                    logger.info(f"{i + 1}. 名称：{book['book_data'][0]['book_name']} 作者：{book['book_data'][0]['author']} ID：{book['book_data'][0]['book_id']} 字数：{book['book_data'][0]['word_number']}")
                 while True:
                     choice_ = input("请选择一个结果, 输入 r 以重新搜索：")
                     if choice_ == "r":
@@ -691,12 +703,12 @@ def search():
                         chosen_book = books[int(choice_) - 1]
                         return chosen_book['book_data'][0]['book_id']
                     else:
-                        print("输入无效，请重新输入。")
+                        logger.error("输入无效，请重新输入。")
             else:
-                print("搜索出错，错误码：", data['code'])
+                logger.error("搜索出错，错误码：", data['code'])
                 break
         else:
-            print("请求失败，状态码：", response.status_code)
+            logger.error("请求失败，状态码：", response.status_code)
             break
 
 def book2down(inp):
@@ -719,7 +731,7 @@ def book2down(inp):
         else:
             status = down_book(book_id)
         if status == 'err':
-            print('找不到此书')
+            logger.error('找不到此书')
             return 'err'
         else:
             return 's'
@@ -748,7 +760,7 @@ record_path = os.path.join(data_dir, 'record.json')
 config_path = os.path.join(data_dir, 'config.json')
 
 # 打印程序信息
-print('本程序完全免费。\nGithub: https://github.com/ying-ck/fanqienovel-downloader\n作者：Yck & qxqycb')
+logger.info('本程序完全免费。\nGithub: https://github.com/ying-ck/fanqienovel-downloader\n作者：Yck & qxqycb')
 
 # 检查并创建配置文件config.json
 config_path = os.path.join(data_dir, 'config.json')
@@ -776,7 +788,7 @@ if not os.path.exists(record_path):
         with open(record_path, 'w', encoding='UTF-8') as f:
             json.dump([], f)
 
-print('正在获取cookie')
+logger.info('正在获取cookie')
 cookie_path = os.path.join(data_dir, 'cookie.json')
 tzj = int(random.choice(list(down_zj(7143038691944959011)[1].values())[21:]))
 tmod = 0
@@ -786,7 +798,7 @@ if os.path.exists(cookie_path):
     tmod = 1
 if tmod == 0 or get_cookie(tzj, cookie) == 'err':
     get_cookie(tzj)
-print('成功')
+logger.info('成功')
 
 backup_folder_path = 'C:\\Users\\Administrator\\fanqie_down_backup'
 
@@ -807,11 +819,11 @@ if os.path.exists(backup_folder_path):
                         shutil.rmtree(target_item_path)
                     shutil.copytree(source_item_path, target_item_path)
         else:
-            print("备份文件夹不存在，无法使用备份数据。")
+            logger.info("备份文件夹不存在，无法使用备份数据。")
     elif choice != '2':
-        print("输入无效，请重新运行程序并正确输入。")
+        logger.error("输入无效，请重新运行程序并正确输入。")
 else:
-    print("程序还未备份")
+    logger.info("程序还未备份")
 
 def perform_backup():
     # 如果备份文件夹存在，先删除旧备份内容
@@ -833,130 +845,132 @@ def perform_backup():
         elif os.path.isdir(source_item_path) and os.path.basename(__file__) != item and item != 'backup':
             shutil.copytree(source_item_path, target_item_path)
 
-# 主循环
-while True:
-    print('\n输入书的id直接下载\n输入下面的数字进入其他功能:')
-    print('''
-1. 更新小说
-2. 搜索
-3. 批量下载
-4. 设置
-5. 备份
-6. 退出
-''')
+if __name__ == '__main__':
 
-    inp = input()
+    # 主循环
+    while True:
+        logger.info('\n输入书的id直接下载\n输入下面的数字进入其他功能:')
+        logger.info('''
+    1. 更新小说
+    2. 搜索
+    3. 批量下载
+    4. 设置
+    5. 备份
+    6. 退出
+    ''')
 
-    if inp == '1':
-        # 更新操作
-        with open(record_path, 'r', encoding='UTF-8') as f:
-            records = json.load(f)
-        for book_id in tqdm(records):
-            status = book2down(book_id)
-            if status == 'err' or status == '已完结':
-                records.remove(book_id)
-        with open(record_path, 'w', encoding='UTF-8') as f:
-            json.dump(records, f)
-        print('更新完成')
+        inp = input()
 
-    elif inp == '4':
-        print('请选择项目：1.正文段首占位符 2.章节下载间隔延迟 3.小说保存路径 4.小说保存方式 5.设置下载线程数')
-        inp2 = input()
-        if inp2 == '1':
-            tmp = input('请输入正文段首占位符(当前为"%s")(直接Enter不更改)：' % config['kgf'])
-            if tmp != '':
-                config['kgf'] = tmp
-            config['kg'] = int(input('请输入正文段首占位符数（当前为%d）：' % config['kg']))
-        elif inp2 == '2':
-            print('由于延迟过小造成的后果请自行负责。\n请输入下载间隔随机延迟的')
-            config['delay'][0] = int(input('下限（当前为%d）（毫秒）：' % config['delay'][0]))
-            config['delay'][1] = int(input('上限（当前为%d）（毫秒）：' % config['delay'][1]))
-        elif inp2 == '3':
-            print('tip:设置为当前目录点取消')
-            time.sleep(1)
-            config['save_path'] = select_save_directory()
-        elif inp2 == '4':
-            print('请选择：1.保存为单个 txt 2.分章保存 3.保存为 epub 4.保存为 HTML 网页格式 5.保存为 LaTeX')
-            inp3 = input()
-            if inp3 == '1':
-                config['save_mode'] = 1
-            elif inp3 == '2':
-                config['save_mode'] = 2
-            elif inp3 == '3':
-                config['save_mode'] = 3
-            elif inp3 == '4':
-                config['save_mode'] = 4
-            elif inp3 == '5':
-                config['save_mode'] = 5
-            else:
-                print('请正确输入!')
-                continue
-        elif inp2 == '5':
-            config['xc'] = int(input('请输入下载线程数：'))
-        else:
-            print('请正确输入!')
-            continue
-        with open(config_path, 'w', encoding='UTF-8') as f:
-            json.dump(config, f)
-        print('设置完成')
+        if inp == '1':
+            # 更新操作
+            with open(record_path, 'r', encoding='UTF-8') as f:
+                records = json.load(f)
+            for book_id in tqdm(records):
+                status = book2down(book_id)
+                if status == 'err' or status == '已完结':
+                    records.remove(book_id)
+            with open(record_path, 'w', encoding='UTF-8') as f:
+                json.dump(records, f)
+            logger.info('更新完成')
 
-    elif inp == '2':
-
-        tmp = search()
-        if tmp == 'b':
-            continue
-        if book2down(tmp) == 'err':
-            print('下载失败')
-
-    elif inp == '3':
-        urls_path = 'urls.txt'  # 定义文件名
-        if not os.path.exists(urls_path):
-            print(f"未找到'{urls_path}'，将为您创建一个新的文件。")
-            with open(urls_path, 'w', encoding='UTF-8') as file:
-                file.write("# 请输入小说链接，一行一个\n")
-        print(f"'{urls_path}' 已存在。请在文件中输入小说链接，一行一个。")
-
-        # 使用默认文本编辑器打开urls.txt文件供用户编辑
-        root = Tk()
-        root.withdraw()  # 隐藏主窗口
-        root.update()  # 更新Tkinter的事件循环，确保窗口被隐藏
-
-        if platform.system() == "Windows":
-            # Windows系统使用os.startfile
-            os.startfile(urls_path)
-        elif platform.system() == "Darwin":
-            # macOS系统使用open命令
-            os.system(f"open -a TextEdit {urls_path}")
-        else:
-            # 其他系统使用默认文本编辑器
-            os.system(f"xdg-open {urls_path}")
-
-        print("输入完成后请保存并关闭文件，然后按Enter键继续...")
-        input()
-
-        # 读取urls.txt文件中的链接
-        with open(urls_path, 'r', encoding='UTF-8') as file:
-            content = file.read()
-            urls = content.replace(' ', '').split('\n')
-
-        # 开始批量下载
-        for url in urls:
-            if url[0] != '#':
-                print(f'开始下载链接: {url}')
-                status = book2down(url)  # 修改这里，传递保存方式
-                if status == 'err':
-                    print(f'链接: {url} 下载失败。')
+        elif inp == '4':
+            logger.info('请选择项目：1.正文段首占位符 2.章节下载间隔延迟 3.小说保存路径 4.小说保存方式 5.设置下载线程数')
+            inp2 = input()
+            if inp2 == '1':
+                tmp = input('请输入正文段首占位符(当前为"%s")(直接Enter不更改)：' % config['kgf'])
+                if tmp != '':
+                    config['kgf'] = tmp
+                config['kg'] = int(input('请输入正文段首占位符数（当前为%d）：' % config['kg']))
+            elif inp2 == '2':
+                logger.info('由于延迟过小造成的后果请自行负责。\n请输入下载间隔随机延迟的')
+                config['delay'][0] = int(input('下限（当前为%d）（毫秒）：' % config['delay'][0]))
+                config['delay'][1] = int(input('上限（当前为%d）（毫秒）：' % config['delay'][1]))
+            elif inp2 == '3':
+                logger.info('tip:设置为当前目录点取消')
+                time.sleep(1)
+                config['save_path'] = select_save_directory()
+            elif inp2 == '4':
+                logger.info('请选择：1.保存为单个 txt 2.分章保存 3.保存为 epub 4.保存为 HTML 网页格式 5.保存为 LaTeX')
+                inp3 = input()
+                if inp3 == '1':
+                    config['save_mode'] = 1
+                elif inp3 == '2':
+                    config['save_mode'] = 2
+                elif inp3 == '3':
+                    config['save_mode'] = 3
+                elif inp3 == '4':
+                    config['save_mode'] = 4
+                elif inp3 == '5':
+                    config['save_mode'] = 5
                 else:
-                    print(f'链接: {url} 下载完成。')
+                    logger.info('请正确输入!')
+                    continue
+            elif inp2 == '5':
+                config['xc'] = int(input('请输入下载线程数：'))
+            else:
+                logger.error('请正确输入!')
+                continue
+            with open(config_path, 'w', encoding='UTF-8') as f:
+                json.dump(config, f)
+            logger.info('设置完成')
 
-    elif inp == '5':
-        perform_backup()
-        print('备份完成')
+        elif inp == '2':
 
-    elif inp == '6':
-        break
+            tmp = search()
+            if tmp == 'b':
+                continue
+            if book2down(tmp) == 'err':
+                logger.error('下载失败')
 
-    else:
-        # 下载新书或更新现有书籍
-        if book2down(inp) == 'err':
-            print('请输入有效的选项或书籍ID。')
+        elif inp == '3':
+            urls_path = 'urls.txt'  # 定义文件名
+            if not os.path.exists(urls_path):
+                logger.info(f"未找到'{urls_path}'，将为您创建一个新的文件。")
+                with open(urls_path, 'w', encoding='UTF-8') as file:
+                    file.write("# 请输入小说链接，一行一个\n")
+            logger.info(f"'{urls_path}' 已存在。请在文件中输入小说链接，一行一个。")
+
+            # 使用默认文本编辑器打开urls.txt文件供用户编辑
+            root = Tk()
+            root.withdraw()  # 隐藏主窗口
+            root.update()  # 更新Tkinter的事件循环，确保窗口被隐藏
+
+            if platform.system() == "Windows":
+                # Windows系统使用os.startfile
+                os.startfile(urls_path)
+            elif platform.system() == "Darwin":
+                # macOS系统使用open命令
+                os.system(f"open -a TextEdit {urls_path}")
+            else:
+                # 其他系统使用默认文本编辑器
+                os.system(f"xdg-open {urls_path}")
+
+            logger.info("输入完成后请保存并关闭文件，然后按Enter键继续...")
+            input()
+
+            # 读取urls.txt文件中的链接
+            with open(urls_path, 'r', encoding='UTF-8') as file:
+                content = file.read()
+                urls = content.replace(' ', '').split('\n')
+
+            # 开始批量下载
+            for url in urls:
+                if url[0] != '#':
+                    logger.info(f'开始下载链接: {url}')
+                    status = book2down(url)  # 修改这里，传递保存方式
+                    if status == 'err':
+                        logger.error(f'链接: {url} 下载失败。')
+                    else:
+                        logger.info(f'链接: {url} 下载完成。')
+
+        elif inp == '5':
+            perform_backup()
+            logger.info('备份完成')
+
+        elif inp == '6':
+            break
+
+        else:
+            # 下载新书或更新现有书籍
+            if book2down(inp) == 'err':
+                logger.error('请输入有效的选项或书籍ID。')
