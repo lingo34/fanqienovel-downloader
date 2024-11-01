@@ -48,6 +48,17 @@ Web 版目前没有 exe 文件，你有两种方式运行 web 版。
 
 下载的小说和个人数据 (`data` 文件夹) 会存在docker 卷里面，分别叫做 `fanqie_data` 和 `fanqie_downloads`。如果你想修改成某个特定的目录，可以修改 `docker-compose.yaml` 文件中的持久化用户数据部分。
 
+### CLI 版
+
+CLI 版实现的功能
+- 通过命令行下载小说。
+- 支持多种保存格式：单个TXT文件、分章节TXT文件、EPUB格式、HTML格式、LaTeX格式。
+- 支持小说搜索、批量下载、更新已下载的小说。
+- 支持设置下载线程数、章节下载间隔延迟、正文段首占位符等。
+
+CLI 版使用方法
+1. 用 Git 克隆这个项目或直接下载项目的zip并解压。进入项目文件夹，新建虚拟环境，并用 `pip install -r requirements.txt` 来安装这个项目的 python 依赖。
+2. 进入`src`目录，用python 运行 `main.py`，根据提示输入小说ID或链接进行下载。
 
 ### v1.1.8版本及以上
 
@@ -137,3 +148,101 @@ Before using this program, please ensure compliance with relevant laws and regul
 ## Star趋势
 
 ![Stars](https://api.star-history.com/svg?repos=ying-ck/fanqienovel-downloader&type=Date)
+
+### 项目结构
+
+```
+fanqienovel-downloader-web/
+│
+├── src/
+│   ├── main.py
+│   ├── server.py
+│   ├── novel_downloaders/
+│   │   ├── __init__.py
+│   │   ├── base.py
+│   │   ├── fanqie.py
+│   │   └── factory.py
+│   ├── static/
+│   │   ├── css/
+│   │   └── js/
+│   └── templates/
+│       ├── components/
+│       └── index.html
+│
+├── requirements.txt
+├── Dockerfile
+├── docker-compose.yml
+└── README.md
+```
+
+### 如何添加新的小说下载器
+
+1. 在 `src/novel_downloaders/` 目录下创建一个新的 Python 文件，例如 `new_downloader.py`。
+2. 在 `new_downloader.py` 中，创建一个新的类，继承自 `NovelDownloaderBase`，并实现所有的抽象方法。
+3. 在 `src/novel_downloaders/factory.py` 中，更新 `NovelDownloaderFactory` 类，添加一个新的方法来创建新的下载器实例。
+4. 更新 `src/main.py` 和 `src/server.py`，使其能够使用新的下载器。
+
+### 示例
+
+假设我们要添加一个新的下载器，名为 `NewDownloader`。
+
+1. 在 `src/novel_downloaders/` 目录下创建 `new_downloader.py` 文件：
+
+```python
+from .base import NovelDownloaderBase
+
+class NewDownloader(NovelDownloaderBase):
+    def download_novel(self, novel_id: Union[str, int]) -> bool:
+        # 实现下载小说的逻辑
+        pass
+
+    def search_novel(self, keyword: str) -> List[Dict]:
+        # 实现搜索小说的逻辑
+        pass
+
+    def update_all_novels(self):
+        # 实现更新所有小说的逻辑
+        pass
+```
+
+2. 在 `src/novel_downloaders/factory.py` 中，更新 `NovelDownloaderFactory` 类：
+
+```python
+from .new_downloader import NewDownloader
+
+class NovelDownloaderFactory:
+    @staticmethod
+    def create_downloader(downloader_type: str) -> Type[NovelDownloaderBase]:
+        if downloader_type == 'fanqie':
+            return FanqieNovelDownloader
+        elif downloader_type == 'new':
+            return NewDownloader
+        else:
+            raise ValueError(f"Unknown downloader type: {downloader_type}")
+```
+
+3. 更新 `src/main.py` 和 `src/server.py`，使其能够使用新的下载器：
+
+在 `src/main.py` 中：
+
+```python
+def create_cli():
+    """Create CLI interface using the NovelDownloader class"""
+    print('本程序完全免费。\nGithub: https://github.com/ying-ck/fanqienovel-downloader\n作者：Yck & qxqycb')
+    
+    config = Config()
+    downloader = NovelDownloaderFactory.create_downloader('new')(config)
+    # 其他代码...
+```
+
+在 `src/server.py` 中：
+
+```python
+config = Config()
+config.save_path = downloads_dir  # Set save path to downloads directory
+
+downloader = NovelDownloaderFactory.create_downloader('new')(config)
+# 其他代码...
+```
+
+通过以上步骤，你可以轻松地将新的小说下载器集成到项目中。

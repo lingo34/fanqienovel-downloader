@@ -3,7 +3,8 @@ monkey.patch_all()
 
 from flask import Flask, render_template, jsonify, send_file, request
 from flask_socketio import SocketIO, emit
-from main import NovelDownloader, Config, SaveMode
+from novel_downloaders.factory import NovelDownloaderFactory
+from novel_downloaders.base import SaveMode, Config
 import os
 import threading
 import queue
@@ -29,18 +30,7 @@ os.makedirs(downloads_dir, exist_ok=True)
 config = Config()
 config.save_path = downloads_dir  # Set save path to downloads directory
 
-downloader = NovelDownloader(
-    config=config,
-    progress_callback=lambda current, total, desc='', chapter='': socketio.emit('progress', {
-        'current': current,
-        'total': total,
-        'percentage': round((current / total * 100) if total > 0 else 0, 2),
-        'description': desc or '下载进度',
-        'chapter': chapter,
-        'text': f'已下载: {current}/{total} 章节 ({round((current / total * 100) if total > 0 else 0, 2)}%)'
-    }),
-    log_callback=lambda msg: socketio.emit('log', {'message': msg})
-)
+downloader = NovelDownloaderFactory.create_downloader('fanqie')(config)
 
 class DownloadQueue:
     def __init__(self):
